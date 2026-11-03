@@ -1231,9 +1231,25 @@ liffRoutes.post('/api/liff/link', async (c) => {
     const matchedAccount = matchedLoginChannelId
       ? dbAccounts.find((a) => a.login_channel_id === matchedLoginChannelId) ?? null
       : null;
-    const friend = await getFriendByLineUserIdForAccount(
+    let friend = await getFriendByLineUserIdForAccount(
       db, lineUserId, matchedAccount?.id ?? null,
     );
+    if (!friend && matchedAccount) {
+      // Webhook ON 前から友だちだった人は friends に行が無い (followers/ids は未認証
+      // アカウントで使えない)。ログインチャネルにリンクされた公式アカウントの LIFF を
+      // 開けている = 友だちなので、ここで行を作って往復ループ (404→/t/→LIFF) を断つ。
+      const created = await upsertFriend(db, {
+        lineUserId,
+        displayName: body.displayName ?? verified.name ?? null,
+        pictureUrl: null,
+        statusMessage: null,
+      });
+      await db
+        .prepare('UPDATE friends SET line_account_id = ? WHERE id = ? AND line_account_id IS NULL')
+        .bind(matchedAccount.id, created.id)
+        .run();
+      friend = (await getFriendByLineUserIdForAccount(db, lineUserId, matchedAccount.id)) ?? created;
+    }
     if (!friend) {
       return c.json({ success: false, error: 'Friend not found' }, 404);
     }

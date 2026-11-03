@@ -11,6 +11,8 @@ import {
   getFriendByLineUserId,
 } from '@line-crm/db';
 import { enrollFriendInScenario } from '@line-crm/db';
+import { LineClient } from '@line-crm/line-sdk';
+import { processStepDeliveries } from '../services/step-delivery.js';
 import { attachTagAndFireSideEffects } from '../services/friend-tag-attach.js';
 import type { TrackedLink } from '@line-crm/db';
 import type { Env } from '../index.js';
@@ -408,6 +410,21 @@ trackedLinks.get('/t/:linkId', async (c) => {
 
           if (actions.length > 0) {
             await Promise.allSettled(actions);
+          }
+
+          // 遅延0分の1通目を毎分cronまで待たせず、タップ直後に届ける。
+          // 取り合いは claim 方式 (active→delivering) で防がれるので cron と二重送信しない。
+          if (link.scenario_id) {
+            try {
+              await processStepDeliveries(
+                c.env.DB,
+                new LineClient(c.env.LINE_CHANNEL_ACCESS_TOKEN),
+                c.env.WORKER_URL,
+                c.env,
+              );
+            } catch (err) {
+              console.error(`/t/${linkId} immediate delivery error:`, err);
+            }
           }
         }
       } catch (err) {
