@@ -35,3 +35,5 @@ apps/worker/dist/
 # ある以上ワークツリーに置いても絶対にコミットしない。
 line-harness-before-*.sql
 *-d1-export*.sql
+.pnpm-store/
+__pycache__/
