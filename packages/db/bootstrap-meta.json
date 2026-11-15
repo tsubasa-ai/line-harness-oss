@@ -81,7 +81,9 @@
     "073_webhook_event_dedup.sql",
     "073_x_line_first_gates.sql",
     "074_security_hardening.sql",
-    "075_ig_link_token_uses.sql"
+    "075_ig_link_token_uses.sql",
+    "076_api_idempotency_keys.sql",
+    "077_api_line_sends.sql"
   ],
-  "migrationCount": 82
+  "migrationCount": 84
 }
